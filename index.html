@@ -84,6 +84,9 @@
   .monthnav button{width:44px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:15px;cursor:pointer}
   .monthnav button:active{background:var(--crema);border-color:var(--crema);color:#fff}
   .monthnav #mLabel{flex:1;text-align:center;font-weight:800;font-size:15px}
+  .customrange{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .customrange input{flex:1;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:14px;font-family:inherit;background:var(--card);color:var(--ink);min-width:0}
+  .customrange span{color:var(--muted);font-size:13px}
   .card-box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
   .card-box h3{margin:0 0 10px;font-size:12px;color:var(--muted);font-weight:800}
   .top-row{margin-bottom:9px}.top-row:last-child{margin-bottom:0}
@@ -209,8 +212,10 @@
       <button data-range="today" class="on">Today</button>
       <button data-range="month">Month</button>
       <button data-range="all">All time</button>
+      <button data-range="custom">Custom</button>
     </div>
     <div class="monthnav" id="monthNav" style="display:none"><button id="mPrev">&#9664;</button><div id="mLabel">&mdash;</div><button id="mNext">&#9654;</button></div>
+    <div class="customrange" id="customRange" style="display:none"><input type="date" id="custFrom"><span>to</span><input type="date" id="custTo"></div>
     <div class="bill-head">
       <div class="b"><div class="k">Sales</div><div class="v num"><span class="cur">&#8377;</span><span id="sumTot">0</span></div></div>
       <div class="b"><div class="k">Profit</div><div class="v num"><span class="cur">&#8377;</span><span id="sumProfit">0</span></div></div>
@@ -2622,6 +2627,9 @@ function $(s){return document.querySelector(s);}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function isToday(ts){const d=new Date(ts),n=new Date();return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();}
 function inMonth(ts){const d=new Date(ts);return d.getFullYear()===viewMonth.y&&d.getMonth()===viewMonth.m;}
+function toInputDate(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function customRangeDates(){const f=$("#custFrom").value,t=$("#custTo").value;if(!f||!t)return null;return{from:new Date(f+"T00:00:00"),to:new Date(t+"T23:59:59")};}
+function inCustomRange(ts){const r=customRangeDates();if(!r)return false;const d=new Date(ts);return d>=r.from&&d<=r.to;}
 function dateStr(ts){return new Date(ts).toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true});}
 function menuById(mid){return menu.find(m=>m.id===mid);}
 function stamp(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -2716,17 +2724,18 @@ function billText(b){let t=(settings.shopName||SHOP)+"\n";if(settings.gstin)t+="
 
 /* ---------- SALES ---------- */
 function refreshToday(){const t=bills.filter(b=>isToday(b.ts));$("#todayTot").textContent=rupee(t.reduce((s,b)=>s+b.total,0));$("#todayCnt").textContent=t.length;}
-function currentList(){if(billRange==="today")return bills.filter(b=>isToday(b.ts));if(billRange==="month")return bills.filter(b=>inMonth(b.ts));return bills.slice();}
+function currentList(){if(billRange==="today")return bills.filter(b=>isToday(b.ts));if(billRange==="month")return bills.filter(b=>inMonth(b.ts));if(billRange==="custom")return bills.filter(b=>inCustomRange(b.ts));return bills.slice();}
 function topSellers(list,n){n=n||5;const map={};list.forEach(b=>b.items.forEach(it=>{const k=it.name;if(!map[k])map[k]={qty:0,amt:0};map[k].qty+=it.qty;map[k].amt+=it.price*it.qty;}));return Object.entries(map).map(([name,v])=>({name,qty:v.qty,amt:v.amt})).sort((a,b)=>b.qty-a.qty).slice(0,n);}
 function rangeProfit(list){return list.reduce((s,b)=>s+b.items.reduce((x,i)=>x+((i.price-(i.cost||0))*i.qty),0),0);}
 function dailySeries(){let days=[];if(billRange==="month"){const n=new Date(viewMonth.y,viewMonth.m+1,0).getDate();for(let d=1;d<=n;d++)days.push({label:String(d),value:0});bills.forEach(b=>{const dt=new Date(b.ts);if(dt.getFullYear()===viewMonth.y&&dt.getMonth()===viewMonth.m)days[dt.getDate()-1].value+=b.total;});}
+  else if(billRange==="custom"){const r=customRangeDates();if(!r)return days;const from=new Date(r.from);from.setHours(0,0,0,0);const to=new Date(r.to);to.setHours(0,0,0,0);const map={};let d=new Date(from),i=0;while(d<=to&&i<93){days.push({label:(d.getMonth()+1)+"/"+d.getDate(),value:0});map[d.toDateString()]=days.length-1;d.setDate(d.getDate()+1);i++;}bills.forEach(b=>{const k=new Date(b.ts);k.setHours(0,0,0,0);const idx=map[k.toDateString()];if(idx!=null)days[idx].value+=b.total;});}
   else{const today=new Date();today.setHours(0,0,0,0);const map={};for(let i=13;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);days.push({label:(d.getMonth()+1)+"/"+d.getDate(),value:0});map[d.toDateString()]=days.length-1;}bills.forEach(b=>{const k=new Date(b.ts);k.setHours(0,0,0,0);const idx=map[k.toDateString()];if(idx!=null)days[idx].value+=b.total;});}return days;}
 function renderChart(){const data=dailySeries();const card=$("#chartCard");if(!data.some(d=>d.value>0)){card.style.display="none";return;}card.style.display="block";
   const max=Math.max.apply(null,data.map(d=>d.value));const n=data.length,VW=320,pad=4,bw=(VW-pad*2)/n;let bars="";
   data.forEach((d,i)=>{const h=max?d.value/max*84:0;const x=pad+i*bw,y=94-h;bars+='<rect x="'+(x+bw*0.16).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bw*0.68).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="1.5" fill="var(--crema)"></rect>';});
   let labels="";[0,Math.floor(n/2),n-1].forEach(i=>{const x=pad+i*bw+bw/2;labels+='<text x="'+x.toFixed(1)+'" y="106" font-size="7" text-anchor="middle" fill="var(--muted)">'+data[i].label+'</text>';});
   $("#chart").innerHTML='<svg viewBox="0 0 '+VW+' 110" width="100%" style="display:block"><line x1="'+pad+'" y1="94" x2="'+(VW-pad)+'" y2="94" stroke="var(--line)" stroke-width="1"></line>'+bars+labels+'</svg>';}
-function renderSales(){$("#monthNav").style.display=billRange==="month"?"flex":"none";$("#mLabel").textContent=MONTHS[viewMonth.m]+" "+viewMonth.y;
+function renderSales(){$("#monthNav").style.display=billRange==="month"?"flex":"none";$("#customRange").style.display=billRange==="custom"?"flex":"none";$("#mLabel").textContent=MONTHS[viewMonth.m]+" "+viewMonth.y;
   const list=currentList();list.sort((a,b)=>b.ts-a.ts);
   const sum=list.reduce((s,b)=>s+b.total,0);const cups=list.reduce((s,b)=>s+b.items.reduce((x,i)=>x+i.qty,0),0);const profit=rangeProfit(list);
   const cash=list.filter(b=>b.pay!=="upi").reduce((s,b)=>s+b.total,0);const upi=list.filter(b=>b.pay==="upi").reduce((s,b)=>s+b.total,0);
@@ -2794,7 +2803,7 @@ function exportJson(){download("moka-backup-"+stamp()+".json",JSON.stringify({ex
 function exportCsv(){const list=currentList().slice().sort((a,b)=>a.ts-b.ts);if(!list.length){toast("Nothing to export in this view");return;}
   let rows=[["Bill","DateTime","By","Pay","Item","Qty","Price","Cost","LineTotal","BillTotal"]];list.forEach(b=>b.items.forEach((it,i)=>rows.push([b.no,dateStr(b.ts),b.by||"",b.pay,it.name,it.qty,it.price,it.cost||0,it.price*it.qty,i===0?b.total:""])));
   const csv=rows.map(r=>r.map(c=>{const s=String(c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");
-  const tag=billRange==="month"?MONTHS[viewMonth.m].toLowerCase()+"-"+viewMonth.y:billRange;download("moka-sales-"+tag+".csv",csv,"text/csv");toast("CSV downloaded");}
+  const tag=billRange==="month"?MONTHS[viewMonth.m].toLowerCase()+"-"+viewMonth.y:(billRange==="custom"?($("#custFrom").value||"from")+"_to_"+($("#custTo").value||"to"):billRange);download("moka-sales-"+tag+".csv",csv,"text/csv");toast("CSV downloaded");}
 
 /* ---------- misc ---------- */
 let toastT;function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),1900);}
@@ -2820,7 +2829,11 @@ $("#lockInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock();})
 $("#userBtn").addEventListener("click",()=>setUser($("#userInput").value));
 $("#userInput").addEventListener("keydown",e=>{if(e.key==="Enter")setUser($("#userInput").value);});
 $("#userChip").addEventListener("click",showUserPicker);
-document.querySelectorAll(".filters button").forEach(b=>b.addEventListener("click",()=>{billRange=b.dataset.range;document.querySelectorAll(".filters button").forEach(x=>x.classList.toggle("on",x===b));renderSales();}));
+document.querySelectorAll(".filters button").forEach(b=>b.addEventListener("click",()=>{billRange=b.dataset.range;document.querySelectorAll(".filters button").forEach(x=>x.classList.toggle("on",x===b));
+  if(billRange==="custom"&&!$("#custFrom").value){const to=new Date(),from=new Date();from.setDate(from.getDate()-6);$("#custFrom").value=toInputDate(from);$("#custTo").value=toInputDate(to);}
+  renderSales();}));
+$("#custFrom").addEventListener("change",()=>{if(billRange==="custom")renderSales();});
+$("#custTo").addEventListener("change",()=>{if(billRange==="custom")renderSales();});
 $("#mPrev").addEventListener("click",()=>{viewMonth.m--;if(viewMonth.m<0){viewMonth.m=11;viewMonth.y--;}renderSales();});
 $("#mNext").addEventListener("click",()=>{viewMonth.m++;if(viewMonth.m>11){viewMonth.m=0;viewMonth.y++;}renderSales();});
 window.addEventListener("resize",()=>{if(activeTab==="order")sizeOrderFoot();});

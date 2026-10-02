@@ -268,6 +268,7 @@
 
 <div class="modal" id="modal">
   <div class="sheet">
+    <div class="paysel" id="recPay"><button data-pay="cash">Cash</button><button data-pay="upi">UPI</button></div>
     <div id="printArea"><div class="receipt" id="receipt"></div></div>
     <div class="sheet-actions">
       <button class="btn-ghost" id="shareBtn">Share</button>
@@ -2658,13 +2659,34 @@ async function refetch(table){
   else if(table==="stock"){const {data}=await sb.from("stock").select("*");stock=(data||[]).map(r=>({id:r.id,name:r.name,qty:Number(r.qty),unit:r.unit||"",low:Number(r.low)}));updateStockBadge();if(activeTab==="stock")renderStock();}
   else if(table==="settings"){const {data}=await sb.from("settings").select("*").eq("id",1).maybeSingle();if(data){settings={shopName:data.shop_name||"MOKA",gstin:data.gstin||"",gstRate:Number(data.gst_rate)||0,upiId:data.upi_id||"",upiName:data.upi_name||"MOKA",passcode:data.passcode||"",team:data.team||""};fillSettings();applyGate();}}
 }
+function applyBillChange(p){
+  if(p.eventType==="DELETE"){const no=p.old&&p.old.no;if(no==null)return refetch("bills");bills=bills.filter(x=>x.no!==no);}
+  else{const nb=mapBill(p.new);const i=bills.findIndex(x=>x.no===nb.no);if(i>=0)bills[i]=nb;else bills.push(nb);}
+  refreshToday();if(activeTab==="sales")renderSales();
+}
+/* fallback: realtime sockets get suspended on phones, so also pull recent bills on a timer / when the app returns to view */
+async function pollRecent(){
+  if(!CLOUD||!sb||document.hidden)return;
+  try{const since=new Date(Date.now()-3*864e5).toISOString();
+    const {data,error}=await sb.from("bills").select("*").gte("ts",since).order("no",{ascending:true});if(error||!data)return;
+    let changed=false;data.map(mapBill).forEach(nb=>{const i=bills.findIndex(x=>x.no===nb.no);if(i<0){bills.push(nb);changed=true;}else if(bills[i].pay!==nb.pay||bills[i].total!==nb.total){bills[i]=nb;changed=true;}});
+    if(changed){refreshToday();if(activeTab==="sales")renderSales();}
+  }catch(e){}
+}
+function refreshAll(){["bills","menu","stock","settings"].forEach(refetch);}
+function startSyncFallbacks(){
+  setInterval(pollRecent,5000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshAll();});
+  window.addEventListener("online",refreshAll);window.addEventListener("focus",pollRecent);
+}
 function subscribe(){
   sb.channel("moka-sync")
-    .on("postgres_changes",{event:"*",schema:"public",table:"bills"},()=>refetch("bills"))
+    .on("postgres_changes",{event:"*",schema:"public",table:"bills"},applyBillChange)
     .on("postgres_changes",{event:"*",schema:"public",table:"menu"},()=>refetch("menu"))
     .on("postgres_changes",{event:"*",schema:"public",table:"stock"},()=>refetch("stock"))
     .on("postgres_changes",{event:"*",schema:"public",table:"settings"},()=>refetch("settings"))
-    .subscribe(status=>{if(status==="SUBSCRIBED"){$("#syncTag").classList.add("live");$("#syncTag").lastChild.textContent="Synced";}});
+    .subscribe(status=>{if(status==="SUBSCRIBED"){$("#syncTag").classList.add("live");$("#syncTag").lastChild.textContent="Synced";refreshAll();}
+      else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){$("#syncTag").classList.remove("live");$("#syncTag").lastChild.textContent="Reconnecting";}});
 }
 
 async function dsInsertBill(fields){
@@ -2675,6 +2697,11 @@ async function dsInsertBill(fields){
   }
   const bill={no:counter,ts:Date.now(),items:fields.items,total:fields.total,pay:fields.pay,by:fields.by||""};
   bills.push(bill);counter++;await billPutLocal(bill);await kvPut("counter",counter);return bill;
+}
+async function dsBillPayUpdate(b,pay){
+  if(CLOUD){const {error}=await sb.from("bills").update({pay}).eq("no",b.no);if(error){toast("Couldn't change payment - check connection");throw error;}b.pay=pay;return;}
+  b.pay=pay;
+  try{if(useIDB)await idbPut("bills",b);else{const a=lsParse("mk.bills")||[];const i=a.findIndex(x=>x.no===b.no);if(i>=0)a[i]=b;else a.push(b);localStorage.setItem("mk.bills",JSON.stringify(a));}}catch(e){toast("Couldn't save the change locally");}
 }
 async function dsMenuInsert(it){menu.push(it);if(CLOUD)await sb.from("menu").insert({id:it.id,name:it.name,cat:it.cat,price:it.price,cost:it.cost});else await kvPut("menu",menu);}
 async function dsMenuUpdate(m){if(CLOUD)await sb.from("menu").update({name:m.name,cat:m.cat,price:m.price,cost:m.cost}).eq("id",m.id);else await kvPut("menu",menu);}
@@ -2719,7 +2746,11 @@ function receiptHTML(b){const gstinLine=settings.gstin?'<div class="meta">GSTIN:
   const payline='<div class="li"><span>Paid via</span><span>'+(b.pay==="upi"?"UPI":"Cash")+'</span></div>';
   const byline=b.by?'<div class="li"><span>Served by</span><span>'+esc(b.by)+'</span></div>':"";
   return '<div class="r-top"><img class="r-logo" src="'+LOGO_FULL+'" alt="MOKA"><div class="tagline">BREWED DIFFERENTLY.</div>'+gstinLine+'<div class="meta">Bill #'+b.no+' &middot; '+dateStr(b.ts)+'</div></div><div class="rule"></div>'+lines+gstBlock(b)+'<div class="rule"></div><div class="r-tot"><span>Total</span><span class="num">'+rupee(b.total)+'</span></div>'+payline+byline+qr+'<div class="thanks">Thank you - see you again!</div>';}
-function showReceipt(b){$("#receipt").innerHTML=receiptHTML(b);$("#shareBtn").dataset.no=b.no;$("#modal").classList.add("on");}
+function showReceipt(b){$("#receipt").innerHTML=receiptHTML(b);$("#shareBtn").dataset.no=b.no;$("#recPay").dataset.no=b.no;syncRecPay(b);$("#modal").classList.add("on");}
+function syncRecPay(b){document.querySelectorAll("#recPay button").forEach(x=>x.classList.toggle("on",x.dataset.pay===(b.pay==="upi"?"upi":"cash")));}
+async function changeBillPay(pay){const b=bills.find(x=>x.no==Number($("#recPay").dataset.no));if(!b||b.pay===pay)return;const old=b.pay;
+  try{await dsBillPayUpdate(b,pay);}catch(e){b.pay=old;syncRecPay(b);return;}
+  $("#receipt").innerHTML=receiptHTML(b);syncRecPay(b);if(activeTab==="sales")renderSales();toast("Bill #"+b.no+" changed to "+(pay==="upi"?"UPI":"Cash"));}
 function billText(b){let t=(settings.shopName||SHOP)+"\n";if(settings.gstin)t+="GSTIN: "+settings.gstin+"\n";t+="Bill #"+b.no+" - "+dateStr(b.ts)+"\n------------------\n";b.items.forEach(it=>{t+=it.qty+"x "+it.name+"  "+rupee(it.price*it.qty)+"\n";});t+="------------------\nTotal  "+rupee(b.total)+"\nPaid via "+(b.pay==="upi"?"UPI":"Cash")+"\nThank you!";return t;}
 
 /* ---------- SALES ---------- */
@@ -2821,6 +2852,7 @@ $("#addItem").addEventListener("click",addMenuItem);$("#niCost").addEventListene
 $("#expJson").addEventListener("click",exportJson);$("#expCsv").addEventListener("click",exportCsv);
 $("#newOrderBtn").addEventListener("click",()=>{$("#modal").classList.remove("on");showTab("order");});
 $("#printBtn").addEventListener("click",()=>window.print());
+document.querySelectorAll("#recPay button").forEach(x=>x.addEventListener("click",()=>changeBillPay(x.dataset.pay)));
 $("#shareBtn").addEventListener("click",()=>{const b=bills.find(x=>x.no==Number($("#shareBtn").dataset.no));if(!b)return;const txt=billText(b);if(navigator.share)navigator.share({text:txt}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast("Bill copied"));else toast("Sharing not supported here");});
 $("#modal").addEventListener("click",e=>{if(e.target.id==="modal")$("#modal").classList.remove("on");});
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
@@ -2846,6 +2878,7 @@ window.addEventListener("resize",()=>{if(activeTab==="order")sizeOrderFoot();});
       sb=window.supabase.createClient(SB_URL,SB_KEY);
       await cloudLoad();
       subscribe();
+      startSyncFallbacks();
       renderAll();
       applyGate();
       return;

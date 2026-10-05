@@ -64,3 +64,19 @@ alter publication supabase_realtime add table menu;
 alter publication supabase_realtime add table stock;
 alter publication supabase_realtime add table bills;
 alter publication supabase_realtime add table settings;
+
+-- ==========================================================
+--  PUSH NOTIFICATIONS (run once; see push-setup.md)
+-- ==========================================================
+alter table bills add column if not exists by_person text default '';
+
+create table if not exists push_subscriptions (
+  endpoint text primary key,
+  p256dh   text not null,
+  auth     text not null,
+  person   text default '',
+  created_at timestamptz default now()
+);
+alter table push_subscriptions enable row level security;
+drop policy if exists p_push on push_subscriptions;
+create policy p_push on push_subscriptions for all using (true) with check (true);

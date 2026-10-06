@@ -1,4 +1,4 @@
-const C="moka-cart-v7";
+const C="moka-cart-v9";
 self.addEventListener("push",e=>{
   let d={};try{d=e.data?e.data.json():{};}catch(_){}
   e.waitUntil(self.registration.showNotification(d.title||"MOKA",{body:d.body||"New bill added",tag:d.tag||"moka-bill",data:{url:"./"}}));

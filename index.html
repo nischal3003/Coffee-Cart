@@ -29,7 +29,7 @@
   .sync.live{color:var(--good)}
   .screen{flex:1;overflow-y:auto;padding:8px 16px 0;display:none}
   .screen.on{display:block}
-  #s-order{padding-bottom:var(--order-foot,240px);overflow:visible} /* visible so .ordbar can stick to the page, not to this box */
+  #s-order{padding-bottom:var(--order-foot,240px)}
   h2.sec{font-size:12px;font-weight:800;color:var(--muted);margin:10px 2px 10px}
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:36px 16px;line-height:1.5}
   .cathead{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--crema-deep);margin:18px 2px 11px}
@@ -181,62 +181,6 @@
   .user-btns{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
   .user-btns button{height:48px;border-radius:12px;border:1px solid #4A3F34;background:#241D17;color:#F4EFE3;font-size:15px;font-weight:800;cursor:pointer}
   .user-btns button:active{background:var(--crema);border-color:var(--crema)}
-  .ordbar{position:sticky;top:var(--strip-h,57px);z-index:4;background:var(--paper);margin:0 -16px;padding:8px 16px 6px}
-  .ordbar input{display:block;width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink);-webkit-appearance:none;appearance:none}
-  .ordbar input:focus{outline:2px solid var(--crema);outline-offset:-1px}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:9px 0 3px;scrollbar-width:none}
-  .chips::-webkit-scrollbar{display:none}
-  .chips button{flex:none;height:36px;padding:0 15px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:13.5px;color:var(--ink-soft);cursor:pointer;font-family:inherit}
-  .chips button.on{background:var(--ink);color:#F4EFE3;border-color:var(--ink)}
-  /* ---------- Responsive: phone is the base; these only kick in on bigger / odd screens ---------- */
-  @media (max-width:360px){
-    .tile{padding:11px 12px}.tile .t-name{font-size:13.5px}
-    .additem .in-sm{width:calc(50% - 4px)}
-    .totalbar .amt{font-size:30px}
-    .bill-head .v{font-size:16px}
-    .nav button{font-size:10.5px}
-  }
-  @media (max-height:500px) and (orientation:landscape){ /* phone held sideways */
-    .strip{padding-top:calc(6px + var(--safe-t));padding-bottom:6px}
-    .cart{max-height:26dvh}
-    .totalbar .amt{font-size:26px}
-    .charge{height:46px}
-    .nav button{flex-direction:row;justify-content:center;gap:8px;padding:6px 0}
-  }
-  @media (min-width:600px){ /* large phone / small tablet */
-    .app{max-width:760px}
-    .order-foot{max-width:760px}
-    .grid{grid-template-columns:repeat(3,1fr)}
-    .tile{min-height:68px}
-    .modal{align-items:center}
-    .sheet{max-width:520px;border-radius:20px;padding-bottom:18px}
-    .additem .in-sm{width:110px}
-    .toast{bottom:90px}
-  }
-  @media (min-width:900px){ /* tablet landscape / desktop: menu on the left, order panel on the right */
-    .app{max-width:1280px;display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto 1fr auto;box-shadow:0 0 0 1px var(--line)}
-    .strip{grid-column:1/-1;grid-row:1;padding-left:24px;padding-right:24px}
-    .screen{grid-column:1/-1;grid-row:2;width:100%;max-width:880px;justify-self:center;padding:12px 24px 24px}
-    #s-order{grid-column:1;max-width:none;justify-self:stretch;padding-bottom:24px}
-    .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-    .tile{min-height:78px;padding:15px 16px}
-    .tile .t-name{font-size:15.5px}
-    .ordbar{margin:0 -24px;padding:8px 24px 6px}
-    .ordbar input{max-width:420px}
-    .order-foot{position:sticky;top:calc(var(--strip-h,64px) + 12px);bottom:auto;left:auto;right:auto;grid-column:2;grid-row:2;align-self:start;max-width:none;margin:12px 24px 24px 0;border:1px solid var(--line);border-radius:var(--r);box-shadow:0 6px 22px rgba(45,37,30,.08);max-height:calc(100dvh - 160px);display:flex;flex-direction:column}
-    .order-foot .cart{max-height:none;flex:1;min-height:60px}
-    .nav{grid-column:1/-1;grid-row:3;justify-content:center}
-    .nav button{max-width:200px;flex-direction:row;justify-content:center;gap:9px;padding:13px 0;font-size:13px}
-    .bill-head .v{font-size:23px}
-    .toast{bottom:90px}
-  }
-  @media (min-width:1400px){.app{max-width:1440px;grid-template-columns:minmax(0,1fr) 440px}}
-  @media (hover:hover){ /* mouse users get hover feedback; touch devices keep :active only */
-    .tile:hover,.brow:hover{border-color:var(--crema)}
-    .filters button:not(.on):hover,.paysel button:not(.on):hover,.btn-ghost:hover{background:#EFE6D3}
-    .nav button:hover{color:#F4EFE3}
-    .charge:not(:disabled):hover{background:var(--crema-deep)}
-  }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   @media print{body *{visibility:hidden!important}#printArea,#printArea *{visibility:visible!important}#printArea{position:absolute;inset:0;margin:0;padding:0}.receipt{border:0}}
 </style>
@@ -248,13 +192,7 @@
     <div class="today">Today <strong id="todayTot">&#8377;0</strong> &middot; <span id="todayCnt">0</span><br><span class="sync" id="syncTag"><i></i>Local</span> <span class="userchip" id="userChip" style="display:none"></span></div>
   </div>
 
-  <section class="screen on" id="s-order">
-    <div class="ordbar">
-      <input id="ordSearch" type="search" placeholder="Search drinks" autocomplete="off" enterkeyhint="search">
-      <div class="chips" id="ordChips"></div>
-    </div>
-    <div id="menuCats"></div>
-  </section>
+  <section class="screen on" id="s-order"><div id="menuCats"></div></section>
   <div class="order-foot" id="orderFoot">
     <div class="cart" id="cart"></div>
     <div class="paysel"><button data-pay="cash" class="on">Cash</button><button data-pay="upi">UPI</button></div>
@@ -2799,17 +2737,10 @@ async function dsSettingsSave(){if(CLOUD)await sb.from("settings").upsert({id:1,
 function tileEl(m){const b=document.createElement("button");b.className="tile";
   b.innerHTML='<span class="t-name">'+esc(m.name)+'</span><span class="t-price num">'+rupee(m.price)+'</span>';
   b.addEventListener("click",()=>{cart[m.id]=(cart[m.id]||0)+1;renderCart();b.classList.remove("pop");void b.offsetWidth;b.classList.add("pop");});return b;}
-let ordCat="All",ordQ="";
-function renderOrderChips(){const cats=["All"].concat(getCats());if(cats.indexOf(ordCat)<0)ordCat="All";
-  $("#ordChips").innerHTML=cats.map(c=>'<button data-c="'+esc(c)+'"'+(c===ordCat?' class="on"':'')+'>'+esc(c)+'</button>').join("");}
-function renderOrderMenu(){const wrap=$("#menuCats");renderOrderChips();if(!menu.length){wrap.innerHTML='<p class="empty">No items yet.<br>Add them in the Menu tab.</p>';return;}wrap.innerHTML="";
-  const q=ordQ.trim().toLowerCase();let shown=0;
-  getCats().forEach(cat=>{if(!q&&ordCat!=="All"&&cat!==ordCat)return;const items=menu.filter(m=>(m.cat||"Other")===cat&&(!q||m.name.toLowerCase().indexOf(q)>=0));if(!items.length)return;shown+=items.length;
+function renderOrderMenu(){const wrap=$("#menuCats");if(!menu.length){wrap.innerHTML='<p class="empty">No items yet.<br>Add them in the Menu tab.</p>';return;}wrap.innerHTML="";
+  getCats().forEach(cat=>{const items=menu.filter(m=>(m.cat||"Other")===cat);if(!items.length)return;
     const h=document.createElement("div");h.className="cathead";h.innerHTML='<span class="dot"></span>'+esc(cat);wrap.appendChild(h);
-    const g=document.createElement("div");g.className="grid";items.forEach(m=>g.appendChild(tileEl(m)));wrap.appendChild(g);});
-  if(!shown)wrap.innerHTML='<p class="empty">No drinks match "'+esc(ordQ.trim())+'".</p>';}
-$("#ordSearch").addEventListener("input",e=>{ordQ=e.target.value;renderOrderMenu();});
-$("#ordChips").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;ordCat=b.dataset.c;ordQ="";$("#ordSearch").value="";renderOrderMenu();});
+    const g=document.createElement("div");g.className="grid";items.forEach(m=>g.appendChild(tileEl(m)));wrap.appendChild(g);});}
 function cartTotal(){return Object.entries(cart).reduce((s,[mid,q])=>{const m=menuById(mid);return s+(m?m.price*q:0);},0);}
 function renderCart(){const c=$("#cart"),ids=Object.keys(cart);
   if(!ids.length){c.innerHTML='<div class="cart-empty">No items yet - tap a drink above.</div>';}
@@ -2818,7 +2749,7 @@ function renderCart(){const c=$("#cart"),ids=Object.keys(cart);
     row.querySelector('[data-a="dec"]').addEventListener("click",()=>{cart[mid]--;if(cart[mid]<=0)delete cart[mid];renderCart();});
     row.querySelector('[data-a="inc"]').addEventListener("click",()=>{cart[mid]++;renderCart();});c.appendChild(row);});}
   const t=cartTotal();$("#orderTotal").textContent=num(t);$("#chargeBtn").disabled=t<=0;requestAnimationFrame(sizeOrderFoot);}
-function sizeOrderFoot(){document.documentElement.style.setProperty("--order-foot",($("#orderFoot").offsetHeight+16)+"px");document.documentElement.style.setProperty("--strip-h",document.querySelector(".strip").offsetHeight+"px");}
+function sizeOrderFoot(){document.documentElement.style.setProperty("--order-foot",($("#orderFoot").offsetHeight+16)+"px");}
 
 async function saveBill(){const items=Object.entries(cart).map(([mid,q])=>{const m=menuById(mid);return{name:m.name,price:m.price,cost:m.cost||0,qty:q};});if(!items.length)return;
   $("#chargeBtn").disabled=true;
